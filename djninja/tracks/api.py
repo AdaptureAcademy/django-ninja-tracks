@@ -1,10 +1,12 @@
+from ninja import NinjaAPI
 from typing import List, Optional
-from ninja import HTTPException, Router, File
+from ninja.errors import HttpError
 from ninja.files import UploadedFile
 from tracks.models import Track
 from tracks.schema import TrackSchema, NotFoundSchema
+from ninja import File
 
-api = Router()
+api = NinjaAPI()
 
 @api.get("/tracks", response=List[TrackSchema])
 def tracks(request, title: Optional[str] = None):
@@ -13,9 +15,9 @@ def tracks(request, title: Optional[str] = None):
             return Track.objects.filter(title__icontains=title)
         return Track.objects.all()
     except Track.DoesNotExist as e:
-        raise HTTPException(status_code=404, detail="No tracks found")
+        raise HttpError(status_code=404, detail="No tracks found")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HttpError(status_code=500, detail=str(e))
 
 @api.get("/tracks/{track_id}", response={200: TrackSchema, 404: NotFoundSchema})
 def track(request, track_id: int):
@@ -23,9 +25,9 @@ def track(request, track_id: int):
         track = Track.objects.get(pk=track_id)
         return 200, track
     except Track.DoesNotExist as e:
-        raise HTTPException(status_code=404, detail="Track does not exist")
+        raise HttpError(status_code=404, detail="Track does not exist")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HttpError(status_code=500, detail=str(e))
 
 @api.post("/tracks", response={201: TrackSchema})
 def create_track(request, track: TrackSchema):
@@ -33,7 +35,7 @@ def create_track(request, track: TrackSchema):
         track = Track.objects.create(**track.dict())
         return 201, track
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HttpError(status_code=500, detail=str(e))
 
 @api.put("/tracks/{track_id}", response={200: TrackSchema, 404: NotFoundSchema})
 def change_track(request, track_id: int, data: TrackSchema):
@@ -44,9 +46,9 @@ def change_track(request, track_id: int, data: TrackSchema):
         track.save()
         return 200, track
     except Track.DoesNotExist as e:
-        raise HTTPException(status_code=404, detail="Track does not exist")
+        raise HttpError(status_code=404, detail="Track does not exist")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HttpError(status_code=500, detail=str(e))
 
 @api.delete("/tracks/{track_id}", response={200: None, 404: NotFoundSchema})
 def delete_track(request, track_id: int):
@@ -55,9 +57,9 @@ def delete_track(request, track_id: int):
         track.delete()
         return 200
     except Track.DoesNotExist as e:
-        raise HTTPException(status_code=404, detail="Track not found")
+        raise HttpError(status_code=404, detail="Track not found")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HttpError(status_code=500, detail=str(e))
 
 @api.post("/upload", url_name='upload')
 def upload(request, file: UploadedFile = File(...)):
@@ -68,6 +70,6 @@ def upload(request, file: UploadedFile = File(...)):
             'data': data
         }
     except UnicodeDecodeError as e:
-        raise HTTPException(status_code=400, detail="Invalid file format")
+        raise HttpError(status_code=400, detail="Invalid file format")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HttpError(status_code=500, detail=str(e))
